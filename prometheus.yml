@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'metrics-aggregator'
+    metrics_path: /api/v1/applications
+    static_configs:
+      - targets: ['metrics-aggregator:8080']
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15672']
