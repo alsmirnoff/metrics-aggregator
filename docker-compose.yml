@@ -1,22 +1,22 @@
 services:
-  # Ваше приложение
-  metrics-aggregator:
-    build: .
-    ports:
-      - "8080:8080"
-    depends_on:
-      - rabbitmq
-      - postgres
-    environment:
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mydb
+  # Приложение
+  # metrics-aggregator:
+  #   build: .
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - rabbitmq
+  #     - postgres
+  #   environment:
+  #     - SPRING_RABBITMQ_HOST=rabbitmq
+  #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mydb
 
-  # Брокер сообщений
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"   # AMQP protocol
-      - "15672:15672" # Management UI
+  # # Брокер сообщений
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   ports:
+  #     - "5672:5672"   # AMQP protocol
+  #     - "15672:15672" # Management UI
 
   # База данных
   postgres:
@@ -25,32 +25,48 @@ services:
       POSTGRES_DB: mydb
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
+    ports:
+      - "5444:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # Система мониторинга
-  prometheus:
-    image: prom/prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - /etc/localtime:/etc/localtime:ro # Для корректного времени:cite[2]
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+  # # Система мониторинга
+  # prometheus:
+  #   image: prom/prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  #     - /etc/localtime:/etc/localtime:ro # Для корректного времени
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
 
-  # Визуализация метрик
-  grafana:
-    image: grafana/grafana-enterprise
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - /etc/localtime:/etc/localtime:ro # Для корректного времени:cite[2]
-    depends_on:
-      - prometheus
+  # # Визуализация метрик
+  # grafana:
+  #   image: grafana/grafana-enterprise
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+  #     - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+  #     - grafana_data:/var/lib/grafana
+  #     - /etc/localtime:/etc/localtime:ro # Для корректного времени
+  #   depends_on:
+  #     - prometheus
+
+  # # Метрики БД
+  # postgres-exporter:
+  #   image: prometheuscommunity/postgres-exporter:latest
+  #   container_name: postgres-exporter
+  #   environment:
+  #     DATA_SOURCE_NAME: "postgresql://user:password@postgres:5444/mydb?sslmode=disable"
+  #   ports:
+  #     - "9187:9187"  # Exporter предоставляет метрики на этом порту
+  #   depends_on:
+  #     - postgres
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:
