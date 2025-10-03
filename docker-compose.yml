@@ -11,12 +11,12 @@ services:
   #     - SPRING_RABBITMQ_HOST=rabbitmq
   #     - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/mydb
 
-  # # Брокер сообщений
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   ports:
-  #     - "5672:5672"   # AMQP protocol
-  #     - "15672:15672" # Management UI
+  # Брокер сообщений
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   # AMQP protocol
+      - "15672:15672" # Management UI
 
   # База данных
   postgres:

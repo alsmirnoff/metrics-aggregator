@@ -1,13 +1,13 @@
 package com.learning.metrics_aggregator.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.learning.metrics_aggregator.dto.MetricRequest;
 import com.learning.metrics_aggregator.entity.Application;
 import com.learning.metrics_aggregator.service.ApplicationService;
+import com.learning.metrics_aggregator.service.MetricService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,7 @@ import org.springframework.http.ResponseEntity;
 public class MetricController {
 
     private final ApplicationService applicationService;
+    private final MetricService metricService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -35,18 +36,18 @@ public class MetricController {
         return applicationService.create(application);
     }
 
-    @PostMapping(path = "/{appId}/metrics")
+    @PostMapping("/{appId}/metrics")
     public ResponseEntity<String> getMetrics(@PathVariable UUID appId, @Valid @RequestBody MetricRequest metricRequest) {
         try {
             metricService.processMetrics(appId, metricRequest);
             return ResponseEntity.accepted().body("Metrics accepted for processing");
             
         } catch (IllegalArgumentException e) {
-            log.warn("Application not found: {}", appId);
+            // log.warn("Application not found: {}", appId);
             return ResponseEntity.badRequest().body("Application not found: " + appId);
             
         } catch (Exception e) {
-            log.error("Error processing metrics for application: {}", appId, e);
+            // log.error("Error processing metrics for application: {}", appId, e);
             return ResponseEntity.internalServerError().body("Error processing metrics");
         }
     }
