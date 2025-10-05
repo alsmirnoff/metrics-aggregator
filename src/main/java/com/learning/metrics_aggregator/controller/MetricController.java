@@ -7,15 +7,17 @@ import org.springframework.web.bind.annotation.RestController;
 import com.learning.metrics_aggregator.dto.MetricRequest;
 import com.learning.metrics_aggregator.entity.Application;
 import com.learning.metrics_aggregator.service.ApplicationService;
-import com.learning.metrics_aggregator.service.MetricService;
+import com.learning.metrics_aggregator.service.MetricProducerService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -28,7 +30,7 @@ import org.springframework.http.ResponseEntity;
 public class MetricController {
 
     private final ApplicationService applicationService;
-    private final MetricService metricService;
+    private final MetricProducerService metricService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -36,18 +38,22 @@ public class MetricController {
         return applicationService.create(application);
     }
 
+    @GetMapping("/list")
+    public List<Application> getAllApplications() {
+        return applicationService.getAll();
+    }
+    
+
     @PostMapping("/{appId}/metrics")
-    public ResponseEntity<String> getMetrics(@PathVariable UUID appId, @Valid @RequestBody MetricRequest metricRequest) {
+    public ResponseEntity<String> receiveMetrics(@PathVariable UUID appId, @Valid @RequestBody MetricRequest metricRequest) {
         try {
             metricService.processMetrics(appId, metricRequest);
             return ResponseEntity.accepted().body("Metrics accepted for processing");
             
         } catch (IllegalArgumentException e) {
-            // log.warn("Application not found: {}", appId);
             return ResponseEntity.badRequest().body("Application not found: " + appId);
             
         } catch (Exception e) {
-            // log.error("Error processing metrics for application: {}", appId, e);
             return ResponseEntity.internalServerError().body("Error processing metrics");
         }
     }

@@ -17,4 +17,9 @@ public interface MetricRepository extends JpaRepository<MetricEntity, UUID> {
     @Query("SELECT m FROM MetricEntity m WHERE m.applicationId = :appId AND m.timestamp >= :since")
     List<MetricEntity> findRecentMetrics(@Param("appId") UUID appId, @Param("since") LocalDateTime since);
 
+    @Query("SELECT DISTINCT m.applicationId FROM MetricEntity m WHERE m.timestamp >= :since")
+    List<UUID> findDistinctApplicationIdsSince(@Param("since") LocalDateTime since);
+
+    List<MetricEntity> findByApplicationIdAndTimestampGreaterThanEqual(UUID applicationId, LocalDateTime since);
+
 }

@@ -1,46 +1,52 @@
 package com.learning.metrics_aggregator.service;
 
-import java.util.UUID;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-import com.learning.metrics_aggregator.dao.ApplicationRepository;
-import com.learning.metrics_aggregator.dto.MetricRequest;
-import com.learning.metrics_aggregator.model.MetricMessage;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 
-import lombok.RequiredArgsConstructor;
-
-@Service
-@RequiredArgsConstructor
+@Component
 public class MetricService {
 
-    private final RabbitTemplate rabbitTemplate;
-    private final ApplicationRepository applicationRepository;
+    private final MeterRegistry meterRegistry;
+    private final Map<String, Double> currentCpuUsageMap = new ConcurrentHashMap<>();
+    private final Map<String, Double> currentMemUsageMap = new ConcurrentHashMap<>();
+    private final Map<String, Long> currentTotalRequestsMap = new ConcurrentHashMap<>();
+    private final Map<String, Double> currentResponseTimeMap = new ConcurrentHashMap<>();
 
-    @Value("${rabbitmq.exchange.name:metrics-exchange}")
-    private String exchangeName;
+    public MetricService(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
 
-    @Value("${rabbitmq.routing.key:metrics}")
-    private String routingKey;
+    public void updateMetrics(String appId, double cpuUsage, double memUsage, long totalRequests, double responseTime) {
+        currentCpuUsageMap.put(appId, cpuUsage);
+        currentMemUsageMap.put(appId, memUsage);
+        currentTotalRequestsMap.put(appId, totalRequests);
+        currentResponseTimeMap.put(appId, responseTime);
 
-    public void processMetrics(UUID appId, MetricRequest metricRequest){
-        if(!applicationRepository.existsById(appId)) {
-            throw new IllegalArgumentException("Application not found: " + appId);
-        }
+        Gauge.builder("application.cpu.usage", currentCpuUsageMap, map -> map.getOrDefault(appId, 0.0))
+            .tag("application_id", appId)
+            .description("CPU usage of a specific application")
+            .register(meterRegistry);
 
-        MetricMessage message = new MetricMessage();
-        message.setApplicationId(appId);
-        message.setCpuUsage(metricRequest.getCpuUsage());
-        message.setMemUsage(metricRequest.getMemUsage());
-        message.setRequestCount(metricRequest.getRequestCount());
-        message.setResponseTime(metricRequest.getResponseTime());
-        message.setActiveConnections(metricRequest.getActiveConnections());
-        message.setErrorCount(metricRequest.getErrorCount());
-        message.setTimestamp(metricRequest.getTimestamp());
+        Gauge.builder("application.memory.usage", currentMemUsageMap, map -> map.getOrDefault(appId, 0.0))
+            .tag("application_id", appId)
+            .description("Memory usage of a specific application")
+            .register(meterRegistry);
 
-        rabbitTemplate.convertAndSend(exchangeName, routingKey, message);
+        Gauge.builder("application.requests.total", currentTotalRequestsMap, map -> map.getOrDefault(appId, 0l))
+            .tag("application_id", appId)
+            .description("Total requests of a specific application")
+            .register(meterRegistry);
+
+        Gauge.builder("application.response.time", currentResponseTimeMap, map -> map.getOrDefault(appId, 0.0))
+            .tag("application_id", appId)
+            .description("Response time of a specific application")
+            .register(meterRegistry);
+
     }
 
 }

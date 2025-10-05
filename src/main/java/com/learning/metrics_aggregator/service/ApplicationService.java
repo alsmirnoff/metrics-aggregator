@@ -1,5 +1,7 @@
 package com.learning.metrics_aggregator.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.learning.metrics_aggregator.dao.ApplicationRepository;
@@ -19,5 +21,9 @@ public class ApplicationService {
             throw new ApplicationAlreadyExistException("Application '" + application.getName() + "' already exist");
         }
         return applicationRepository.save(application);
+    }
+
+    public List<Application> getAll() {
+        return applicationRepository.findAll();
     }
 }
