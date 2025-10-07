@@ -17,7 +17,9 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MetricAggregationService {
@@ -28,15 +30,24 @@ public class MetricAggregationService {
 
     @Scheduled(fixedRate = 60000)
     public void aggregateMetrics() {
+        log.info("=== STARTING METRICS AGGREGATION ===");
+
         LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+        log.info("Looking for metrics since: {}", fiveMinutesAgo);
         List<UUID> activeApplications = metricRepository.findDistinctApplicationIdsSince(fiveMinutesAgo);
+        log.info("Found {} active applications: {}", activeApplications.size(), activeApplications);
 
         for (UUID appId : activeApplications) {
+            log.info("Application {} has metrics in last 5 minutes", appId);
             aggregateMetricsForApplication(appId, fiveMinutesAgo);
         }
+
+        log.info("=== AGGREGATION COMPLETED ===");
     }
 
     private void aggregateMetricsForApplication(UUID appId, LocalDateTime since){
+        log.debug("Aggregating metrics for application: {}", appId);
+
         List<MetricEntity> metrics = metricRepository.findByApplicationIdAndTimestampGreaterThanEqual(appId, since);
         
         if (metrics.isEmpty()) {
@@ -64,6 +75,9 @@ public class MetricAggregationService {
                 .average()
                 .orElse(0.0);
 
+        log.info("Aggregated values for {}: CPU={}, Memory={}, Requests={}, ResponseTime={}", 
+                appId, avgCpu, avgMemory, totalRequests, avgResponseTime);
+
         AggregatedMetrics aggregated = new AggregatedMetrics(avgCpu, avgMemory, totalRequests, avgResponseTime);
         currentMetrics.put(appId, aggregated);
         registerMetricsInMicrometer(appId);
@@ -71,6 +85,9 @@ public class MetricAggregationService {
 
     private void registerMetricsInMicrometer(UUID appId) {
         String appIdString = appId.toString();
+
+        log.info("Registering metrics in Micrometer for application: {}", appIdString);
+
         Tags tags = Tags.of("application", appIdString);
         
         Gauge.builder("application.cpu.usage", currentMetrics, 
